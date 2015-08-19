@@ -95,9 +95,12 @@ void* rt_thread(void *tcontext);
 int job(int id, struct rt_task param, micSpeakerStruct* ms,  double rArray1[], double rArray2[], int ticks);
 
 
+
 struct Core_file_struct* traceFiles;
 int number_of_Cores = 24;
-	
+
+void printEventStruct(struct Event_struct* event);
+
 int convert_data_stream_to_event_struct(void* data, size_t offset, struct Event_struct* event);
 
 struct Core_file_struct* loadFiles(int numberOfCores);
@@ -410,7 +413,7 @@ void* rt_thread(void *tcontext)
 			} else {
 				for(innerCount = 0; innerCount < dataRead; innerCount++){
 					tempEvent = data+(sizeof(struct Event_struct)*innerCount);
-					printf("For task %hu, The job_id is %u, the execution time is %llu \n",tempEvent->task_id, tempEvent->job_id,tempEvent->exec_time);
+					printEventStruct(tempEvent);
 				}
 			}
 			free(data);
@@ -648,7 +651,7 @@ int turn_events_off(FILE* file, int event_id) {
 }
 
 size_t read_trace_record(FILE* file, struct Event_struct* data, size_t number_of_records_to_read) {
-	size_t bytesRead; 
+	size_t recordsRead; 
 	size_t i;
 	size_t offset=0;
 	struct Event_struct* eventStructTempPointer;
@@ -658,21 +661,16 @@ size_t read_trace_record(FILE* file, struct Event_struct* data, size_t number_of
 		fprintf(stderr, "Error : Out of memory- %s\n", strerror(errno));
 		return 0;
 	}
-	bytesRead = fread(tempStore, ST_JOB_COMPLETION_LEN, number_of_records_to_read, file);
-	if (bytesRead == 0){
+	recordsRead = fread(tempStore, ST_JOB_COMPLETION_LEN, number_of_records_to_read, file);
+	if (recordsRead == 0){
 		fprintf(stderr, "Error : couldn't read any data\n");
 		free(tempStore);
 		return 0;
 	}
-	if (bytesRead%ST_JOB_COMPLETION_LEN != 0) {
-		printf("The number of bytes read is %lu\n",bytesRead);
-		fprintf(stderr, "Error : incomplete data read ");
-		free(tempStore);
-		return 0;
-	}
+
 	
 	//Convert the raw data into an array of even structs 
-	records_actually_read = bytesRead/ST_JOB_COMPLETION_LEN;
+	records_actually_read = recordsRead;
 	eventStructTempPointer = data;
 	for (i=0; i < records_actually_read; i++){
 		convert_data_stream_to_event_struct(tempStore, offset, eventStructTempPointer);
@@ -700,9 +698,9 @@ int convert_data_stream_to_event_struct(void* data, size_t offset, struct Event_
 	event_id = (unsigned char*) (data+offset);
     cpu = (unsigned char*)(event_id+sizeof(unsigned char));
 	task_id = (unsigned short*)(cpu+sizeof(unsigned char));
-	job_id = (unsigned int*)(task_id+sizeof(unsigned short));
-	when = (unsigned long long *)(job_id+sizeof(unsigned int));
-    exec_time = (unsigned long long *)(when+sizeof(unsigned long long));
+	job_id = (unsigned int*)(data+offset+sizeof(unsigned char)+sizeof(unsigned char)+sizeof(unsigned short)); //(task_id+sizeof(unsigned short));
+	when = (unsigned long long *)(data+offset+sizeof(unsigned char)+sizeof(unsigned char)+sizeof(unsigned short)+sizeof(unsigned int));
+    exec_time = (unsigned long long *)(data+offset+sizeof(unsigned char)+sizeof(unsigned char)+sizeof(unsigned short)+sizeof(unsigned int)+sizeof(unsigned long long));
     
     event->event_id = *event_id;
     event->cpu = *cpu;
@@ -714,5 +712,16 @@ int convert_data_stream_to_event_struct(void* data, size_t offset, struct Event_
     event->was_forced = event->exec_time & 0x1;
  	event->exec_time = event->exec_time >> 1;
     return 0;
-
 }
+
+
+void printEventStruct(struct Event_struct* event) {
+	printf(" Event id %hhu, CPU %hhu, taskID %hu, jobId %u, when %llu, exec_time %llu, forced %hhu\n",
+	event->event_id, 
+    event->cpu,
+	event->task_id,
+	event->job_id,
+	event->when,
+    event->exec_time,
+    event->was_forced);
+};
