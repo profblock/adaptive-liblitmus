@@ -1,7 +1,6 @@
 #ifndef _WHISPER_H_
 #define _WHISPER_H_
-//TODO: Occluding object with circumference
-//TODO: Noise in room
+
 
 
 

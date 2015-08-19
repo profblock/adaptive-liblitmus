@@ -25,6 +25,8 @@
 /* Include the LITMUS^RT API.*/
 #include "litmus.h"
 
+#include "event_tracker.h"
+
 #include <time.h>
 
 #include <dirent.h>
