@@ -73,7 +73,7 @@ AR  := ${CROSS_COMPILE}${AR}
 
 all     = lib ${rt-apps}
 rt-apps = cycles base_task rt_launch rtspin release_ts measure_syscall \
-	  base_mt_task uncache runtests
+	  base_mt_task adap_mt_task uncache runtests
 
 .PHONY: all lib clean dump-config TAGS tags cscope help doc
 
@@ -216,10 +216,17 @@ vpath %.c bin/
 
 obj-cycles = cycles.o
 
+obj-whisper = whisper.o
+
+obj-adaptive_task = adaptive_task.o
+
 obj-base_task = base_task.o
 
 obj-base_mt_task = base_mt_task.o
 ldf-base_mt_task = -pthread
+
+obj-adap_mt_task = adap_mt_task.o whisper.o
+ldf-adap_mt_task = -pthread -lm -lrt
 
 obj-rt_launch = rt_launch.o common.o
 
@@ -239,7 +246,7 @@ lib-measure_syscall = -lm
 
 .SECONDEXPANSION:
 ${rt-apps}: $${obj-$$@} liblitmus.a
-	$(CC) -o $@ $(LDFLAGS) ${ldf-$@} $(filter-out liblitmus.a,$+) $(LOADLIBS) $(LDLIBS) ${liblitmus-flags} ${lib-$@}
+	$(CC) -o $@ $(LDFLAGS) ${ldf-$@} $(filter-out liblitmus.a,$+) $(LOADLIBS) $(LDLIBS) ${liblitmus-flags} ${lib-$@} -lm -lrt
 
 # ##############################################################################
 # Dependency resolution.
