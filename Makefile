@@ -218,8 +218,9 @@ obj-cycles = cycles.o
 
 obj-whisper = whisper.o
 
-obj-event_tracker = event_tracker.o
+obj-feedback = feedback.o
 
+obj-event_tracker = event_tracker.o
 
 obj-adaptive_task = adaptive_task.o
 
@@ -228,7 +229,7 @@ obj-base_task = base_task.o
 obj-base_mt_task = base_mt_task.o
 ldf-base_mt_task = -pthread
 
-obj-adap_mt_task = adap_mt_task.o whisper.o event_tracker.o
+obj-adap_mt_task = adap_mt_task.o whisper.o event_tracker.o feedback.o
 ldf-adap_mt_task = -pthread -lm -lrt
 
 obj-rt_launch = rt_launch.o common.o

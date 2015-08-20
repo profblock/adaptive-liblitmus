@@ -158,7 +158,6 @@ size_t read_trace_record(FILE* file, struct event_struct* data, size_t number_of
 	}
 	recordsRead = fread(tempStore, ST_JOB_COMPLETION_LEN, number_of_records_to_read, file);
 	if (recordsRead == 0){
-		fprintf(stderr, "Error : couldn't read any data\n");
 		free(tempStore);
 		return 0;
 	}
