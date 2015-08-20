@@ -61,10 +61,6 @@ struct service_levels_struct {
 	unsigned int service_level;
 };
 
-struct execution_time_struct {
-	pid_t task_id;
-	unsigned long long historic_exeuction_time;
-};
 
 struct task_id_to_index_map {
 	pid_t task_id;
@@ -540,7 +536,8 @@ void* scraper_thread(void* s_context) {
 	size_t innerCount;
 	struct event_struct * data;
 	struct event_struct * tempEvent;
-	//unsigned long long execution_time_array[NUM_THREADS+1];
+	struct execution_time_struct execution_time_array[NUM_THREADS+1];
+	struct execution_time_struct* temp_et_struct;
 	struct task_id_to_index_map index_map[NUM_THREADS+1];
 	int map_size = NUM_THREADS+1;
 	
@@ -549,6 +546,9 @@ void* scraper_thread(void* s_context) {
 	pid_t my_id = gettid();
 	int i,k;
 	int index_of_task;
+	const double alphaValue = 0.102;
+	const double betaValue = 0.30345;
+	//long long estimated_execution_time;
 
 	init_rt_task_param(&param);
 	param.exec_cost = ms2ns(EXEC_COST);
@@ -585,10 +585,13 @@ void* scraper_thread(void* s_context) {
 	
 	init_map(index_map, map_size);
 	
-/*	for(k =0; k < map_size;k++){
-		execution_time_array[k] = 0;
+	for(k =0; k < map_size;k++){
+		execution_time_array[k].cumulative_difference=0;
+		execution_time_array[k].current_difference=0;
+		execution_time_array[k].actual_execution=0;
+		execution_time_array[k].estimated_execution=0;	
 	}
-*/
+
 	//We dont' want this task executing until all tasks have intialized the structure
 	
 	k = 0;
@@ -599,11 +602,9 @@ void* scraper_thread(void* s_context) {
 		if (ctx->service_levels_array[k].task_id > 0) {
 			//Add it to the map
 			set_index_of_task_id(index_map, map_size,ctx->service_levels_array[k].task_id,k);
-			printf("adding an value %d to index %d\n",ctx->service_levels_array[k].task_id, k );
 			k++;
 		} else {
 			// must not have been set. Go to sleep, try again later
-			printf("Going to sleep on index %d\n", k);
 			sleep_next_period();
 		}
 	}
@@ -622,25 +623,17 @@ void* scraper_thread(void* s_context) {
 					index_of_task = get_index_of_task_id(index_map, map_size,tempEvent->task_id);
 
 					if (index_of_task >= 0) {
-						
+						temp_et_struct = &(execution_time_array[index_of_task]);
+						/* The alpha and beta values 0.102 and 0.30345 are the a and b values that are calculated from
+						 * Aaron Block's dissertation referenced on pages 293 (the experimental values for
+						 * a and c) and the relationship of a,b,c is given on page 253 just below (6.2)
+						 */
+						 printf("For task %hi Previous estimated %lli\n",tempEvent->task_id,temp_et_struct->estimated_execution);
+						 printf("For task %hi previous actual    %llu\n\n", tempEvent->task_id,tempEvent->exec_time);
+						 calc_estimated(temp_et_struct, tempEvent->exec_time, alphaValue, betaValue);
+						 
 
-
-						// This means it's data that isn't part of this set and should be ignored
-// 						printf("Adding to structure %d\n",tempEvent->task_id );
-// 						//Let's go try and find it. 
-// 						for(k=0;k<map_size;k++){
-// 							if (ctx->service_levels_array[k].task_id == tempEvent->task_id) {
-// 								index_of_task = k;
-// 								printf("actually adding an value %d to index %d\n",tempEvent->task_id, k );
-// 							}
-// 						}
-// 						if (index_of_task < 0){
-// 							printf("Not %d yet in data\n",tempEvent->task_id );
-// 						} else {
-// 							set_index_of_task_id(index_map, map_size,tempEvent->task_id,index_of_task);
-// 						}
 					}
-					//printEventStruct(tempEvent);
 				}
 			}
 		}
