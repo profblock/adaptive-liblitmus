@@ -13,7 +13,7 @@
 const char *usage_msg =
 	"Usage: reassign_task OPTIONS PID\n"
 	"    -a ID             reassign task to cluster/partition ID\n"
-	"    -s                stress test (migrate randomly)\n"
+	"    -s DELAY          stress test (migrate randomly every DELAY ms)\n"
 	"    PID               PID of the task to reassign\n"
 	"\n";
 
@@ -22,7 +22,7 @@ void usage(char *error) {
 	exit(1);
 }
 
-#define OPTSTR "sha:"
+#define OPTSTR "s:ha:"
 
 int main(int argc, char** argv)
 {
@@ -33,11 +33,14 @@ int main(int argc, char** argv)
 	pid_t target;
 	int cluster = -1;
 	int want_stress_test = 0;
+	lt_t delay = 0;
 
 	while ((opt = getopt(argc, argv, OPTSTR)) != -1) {
 		switch (opt) {
 		case 's':
 			want_stress_test = 1;
+			/* delay given in ms, scaled to seconds */
+			delay = atof(optarg) * 1E6;
 			break;
 		case 'a':
 			cluster = atoi(optarg);
@@ -73,6 +76,7 @@ int main(int argc, char** argv)
 	if (cluster != -1) {
 		/* move task to new cluster */
 		param.cpu = domain_to_first_cpu(cluster);
+		printf(":: assigning %d to P%u\n", target, param.cpu);
 		ret = set_rt_task_param(target, &param);
 		if (ret < 0)
 			bail_out("could not set new RT parameters");
@@ -80,7 +84,9 @@ int main(int argc, char** argv)
 
 	srand(time(NULL));
 	while (want_stress_test) {
+		lt_sleep(delay);
 		param.cpu = rand() % num_online_cpus();
+		printf(":: assigning %d to P%u\n", target, param.cpu);
 		ret = set_rt_task_param(target, &param);
 		if (ret < 0)
 			bail_out("could not set new RT parameters");

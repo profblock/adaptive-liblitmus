@@ -236,6 +236,7 @@ obj-measure_syscall = null_call.o
 lib-measure_syscall = -lm
 
 obj-reassign_task = reassign_task.o common.o
+lib-reassign_task = -lrt
 
 # ##############################################################################
 # Build everything that depends on liblitmus.
